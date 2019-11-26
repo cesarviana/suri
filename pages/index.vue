@@ -65,6 +65,7 @@ class Vehycle extends jssim.SimEvent {
 
   runOverRoads(pos) {
     pos.x += this.velocity.x
+    pos.y += this.velocity.y
   }
 
   handleEmergency(emergency) {
@@ -86,8 +87,21 @@ class Vehycle extends jssim.SimEvent {
   escape(emergency) {
     const thisPos = this.space.getLocation(this.id)
     const emergencyPos = this.space.getLocation(emergency.id)
-    if(this.velocity.x > 0 && emergencyPos.x > thisPos.x)
+    const forwarding = this.velocity.x > 0
+    const wasBlocked = emergencyPos.x > thisPos.x
+    if(!this.alternativeRoute && forwarding && wasBlocked){
       this.velocity.x = -this.velocity.x
+    }
+    if(thisPos.x < 50){
+      this.alternativeRoute = true
+      this.color = 'brown'
+      this.velocity.x = Math.abs(this.velocity.x)
+      this.velocity.y = -0.8
+      this.emergency = undefined
+    }
+    if(thisPos.y < 20) {
+      this.velocity.y = 0.8
+    }
   }
 }
 
@@ -139,7 +153,7 @@ export default {
         y: this.canvas.height / 2,
         endX: this.canvas.width,
         endY: this.canvas.height / 2,
-        width: 40
+        width: 60
       }
 
       const roads = [
@@ -149,14 +163,14 @@ export default {
           y: this.canvas.height / 2,
           endX: this.canvas.width / 2,
           endY: 0,
-          width: 40
+          width: 60
         },
         {
           x: this.canvas.width / 2 - 10,
           y: 0,
           endX: this.canvas.width,
           endY: this.canvas.height / 2,
-          width: 40
+          width: 60
         }
       ]
 
