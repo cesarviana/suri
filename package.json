@@ -1,0 +1,17 @@
+{
+  "name": "suri_simulation",
+  "version": "1.0.0",
+  "description": "Agent-based simulation of in emergency vehycles behaviour ",
+  "author": "Cesar Viana, Cassiano Viana",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "nuxt": "^2.0.0"
+  },
+  "devDependencies": {}
+}
