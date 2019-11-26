@@ -21,7 +21,7 @@ class Vehycle extends jssim.SimEvent {
     this.id = id
     this.space = space
     this.space.updateAgent(this, x, y)
-    this.velocity = new jssim.Vector2D(0.5, 0.5)
+    this.velocity = new jssim.Vector2D(3, 0)
 
     this.border = 30
     this.color = 'blue'
@@ -29,12 +29,13 @@ class Vehycle extends jssim.SimEvent {
   }
   update() {
     const pos = this.space.getLocation(this.id)
-    pos.x++
+    pos.x += this.velocity.x
 
     const neighbors = this.space.getNeighborsWithinDistance(pos, 30)
     const emergency = neighbors.find(agent=>agent instanceof Emergency)
     if(emergency) {
       this.color = 'red'
+      this.velocity.x = -1
     }
 
   }
@@ -100,7 +101,7 @@ export default {
         scheduler.scheduleRepeatingIn(vehycle, 10)
       }
 
-      const xEmergency = Math.random() * this.canvas.width
+      const xEmergency = Math.random() * this.canvas.width / 2 + this.canvas.width / 2
       const yEmergency = Math.ceil(Math.random() * roadWidth / 2) + yRoad
 
       const emergency = new Emergency(-1, xEmergency, yEmergency, space)
@@ -111,7 +112,7 @@ export default {
         scheduler.update()
         space.render(canvas)
         this.currentTime = scheduler.current_time
-      }, 600)
+      }, 40)
     }
   }
 }
