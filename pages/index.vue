@@ -117,7 +117,7 @@ export default {
   data() {
     return {
       numVehycles: 40,
-      timeToUpdate: 1000,
+      timeToUpdate: 100,
       handleInterval: undefined, 
       canvas: {
         width: 1200,
@@ -143,13 +143,7 @@ export default {
       }
 
       const roads = [
-        {
-          x: 0,
-          y: this.canvas.height / 2,
-          endX: this.canvas.width,
-          endY: this.canvas.height / 2,
-          width: 40
-        },
+        road, 
         {
           x: 0,
           y: this.canvas.height / 2,
