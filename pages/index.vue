@@ -2,8 +2,21 @@
   <div class="container">
     <div>
       <h1>SURI - Ambiente de simulação</h1>
-      <span>{{currentTime}}</span>
       <canvas id="myCanvas" ref="canvas" :width="canvas.width" :height="canvas.height" style="border:1px solid #000000;"></canvas>
+      <br>
+      <div>
+        <b>Número de veículos</b>
+        {{numVehycles}}
+        <input type="range" v-model="numVehycles">
+      </div>
+      <div>
+        <b>Tempo para atualização</b>
+        {{timeToUpdate}}
+        <input type="range" v-model="timeToUpdate" min="100" max="1000">
+      </div>
+      <div>
+        <button @click="restart">Reiniciar</button>
+      </div>
 
     </div>
   </div>
@@ -14,7 +27,7 @@ import Logo from '~/components/Logo.vue'
 import jssim from 'js-simulator'
 
 class Vehycle extends jssim.SimEvent {
-  constructor(id, x, y, space){
+  constructor(id, x, y, space, roads){
     super()
     const rank = 1
     jssim.SimEvent.call(this, rank)
@@ -26,11 +39,11 @@ class Vehycle extends jssim.SimEvent {
     this.border = 30
     this.color = 'blue'
     this.size = new jssim.Vector2D(10, 10)
+    this.roads = roads
   }
   update() {
-
     const pos = this.space.getLocation(this.id)
-    pos.x += this.velocity.x
+    this.runOverRoads(pos)
 
     if(this.emergency){
       this.handleEmergency(this.emergency)
@@ -48,6 +61,10 @@ class Vehycle extends jssim.SimEvent {
       this.emergency = emergency
       this.handleEmergency(emergency)
     }
+  }
+
+  runOverRoads(pos) {
+    pos.x += this.velocity.x
   }
 
   handleEmergency(emergency) {
@@ -99,26 +116,24 @@ export default {
   },
   data() {
     return {
-      maxVehycles: 40,
+      numVehycles: 40,
+      timeToUpdate: 1000,
+      handleInterval: undefined, 
       canvas: {
-        width: 640,
-        height: 640
+        width: 1200,
+        height: 300
       },
-      currentTime: 0
+      currentTime: 0,
+      scheduler: new jssim.Scheduler(),
+      space: new jssim.Space2D()
     }
-  },
-  mounted() {
-    this.startSimulation()
   },
   methods: {
     startSimulation() {
+      clearInterval(this.handleInterval)
+      this.scheduler.reset()
+      this.space.reset()
       
-      const scheduler = new jssim.Scheduler()
-      scheduler.reset()
-
-      const space = new jssim.Space2D()
-      space.reset()
-
       const road = {
         x: 0,
         y: this.canvas.height / 2,
@@ -126,31 +141,59 @@ export default {
         endY: this.canvas.height / 2,
         width: 40
       }
-      space.drawLine(road.x, road.y, road.endX, road.endY, { stroke: 'gray', width: road.width })
 
-      for(let i=0; i<this.maxVehycles; i++){
+      const roads = [
+        {
+          x: 0,
+          y: this.canvas.height / 2,
+          endX: this.canvas.width,
+          endY: this.canvas.height / 2,
+          width: 40
+        },
+        {
+          x: 0,
+          y: this.canvas.height / 2,
+          endX: this.canvas.width / 2,
+          endY: 0,
+          width: 40
+        },
+        {
+          x: this.canvas.width / 2 - 10,
+          y: 0,
+          endX: this.canvas.width,
+          endY: this.canvas.height / 2,
+          width: 40
+        }
+      ]
+
+      roads.forEach(road => this.space.drawLine(road.x, road.y, road.endX, road.endY, { stroke: 'gray', width: road.width }))
+      
+      for(let i=0; i<this.numVehycles; i++){
         const x = Math.ceil(Math.random() * this.canvas.width)
-        const y = Math.ceil(Math.random() * road.width / 2) + road.y
-        const vehycle = new Vehycle(i, x, y, space)
-        scheduler.scheduleRepeatingIn(vehycle, 10)
+        const y = Math.ceil(Math.random() * road.width / 2 ) + road.y
+        // const direction = y > road.
+        const vehycle = new Vehycle(i, x, y, this.space, roads)
+        this.scheduler.scheduleRepeatingIn(vehycle, this.timeToUpdate)
       }
 
       const scheduleTime = 50
-      this.scheduleEmergency(scheduler, space, road, scheduleTime)
+      this.scheduleEmergency(this.scheduler, this.space, road, scheduleTime)
 
       const canvas = this.$refs.canvas
-      setInterval(()=>{
-        scheduler.update()
-        space.render(canvas)
-        this.currentTime = scheduler.current_time
-      }, 300)
+      this.handleInterval = setInterval(()=>{
+        this.scheduler.update()
+        this.space.render(canvas)
+        this.currentTime = this.scheduler.current_time
+      }, this.timeToUpdate)
     },
     scheduleEmergency(scheduler, space, road, scheduleTime) {
-      const xEmergency = Math.random() * this.canvas.width
-      const yEmergency = Math.ceil(Math.random() * road.width / 2) + road.y
-
+      const xEmergency = road.endX / 2
+      const yEmergency = road.y + 10
       const emergency = new Emergency(jssim.guid(), xEmergency, yEmergency, space)
       scheduler.schedule(emergency, scheduleTime)
+    },
+    restart() {
+      this.startSimulation()
     }
   }
 }
