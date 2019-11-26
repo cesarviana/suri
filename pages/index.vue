@@ -28,16 +28,49 @@ class Vehycle extends jssim.SimEvent {
     this.size = new jssim.Vector2D(10, 10)
   }
   update() {
+
     const pos = this.space.getLocation(this.id)
     pos.x += this.velocity.x
+
+    if(this.detectedEmergency){
+      this.notifyEmergencyToNeighbors()
+      return
+    }
+
+    const messages = this.readInBox(this)
+    if(messages.length > 0) {
+      this.detectedEmergency = true
+      this.handleEmergency()
+      return
+    }  
 
     const neighbors = this.space.getNeighborsWithinDistance(pos, 30)
     const emergency = neighbors.find(agent=>agent instanceof Emergency)
     if(emergency) {
-      this.color = 'red'
-      this.velocity.x = -1
+      this.detectedEmergency = true
+      this.handleEmergency()
     }
+  }
 
+  handleEmergency() {
+    this.color = 'red'
+    this.escape()
+    if(this.detectedEmergency) {
+      this.notifyEmergencyToNeighbors()
+    }
+  }
+
+  escape(){
+    this.velocity.x = -this.velocity.x
+  }
+
+  notifyEmergencyToNeighbors() {
+    const pos = this.space.getLocation(this.id)
+    this.space.getNeighborsWithinDistance(pos, 30)
+    .filter(agent => agent instanceof Vehycle)
+    .forEach(vehycle => this.sendMsg(vehycle.id, {
+      content: 'emergency'
+    }))
   }
 }
 
@@ -50,6 +83,7 @@ class Emergency extends jssim.SimEvent {
     jssim.SimEvent.call(this, rank)
     this.id = id
     this.space = space
+    this.velocity = new jssim.Vector2D(0, 0)
   }
   update() {
     this.space.updateAgent(this, this.x, this.y)
@@ -65,7 +99,7 @@ export default {
   },
   data() {
     return {
-      maxVehycles: 30,
+      maxVehycles: 40,
       canvas: {
         width: 640,
         height: 640
