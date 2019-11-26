@@ -32,45 +32,45 @@ class Vehycle extends jssim.SimEvent {
     const pos = this.space.getLocation(this.id)
     pos.x += this.velocity.x
 
-    if(this.detectedEmergency){
-      this.notifyEmergencyToNeighbors()
-      return
+    if(this.emergency){
+      this.handleEmergency(this.emergency)
     }
 
     const messages = this.readInBox(this)
     if(messages.length > 0) {
-      this.detectedEmergency = true
-      this.handleEmergency()
-      return
+      this.emergency = messages[0].content
+      this.handleEmergency(this.emergency)
     }  
 
     const neighbors = this.space.getNeighborsWithinDistance(pos, 30)
     const emergency = neighbors.find(agent=>agent instanceof Emergency)
     if(emergency) {
-      this.detectedEmergency = true
-      this.handleEmergency()
+      this.emergency = emergency
+      this.handleEmergency(emergency)
     }
   }
 
-  handleEmergency() {
+  handleEmergency(emergency) {
     this.color = 'red'
-    this.escape()
-    if(this.detectedEmergency) {
-      this.notifyEmergencyToNeighbors()
-    }
+    this.escape(emergency)
+    this.notifyEmergencyToNeighbors(emergency)
   }
 
-  escape(){
-    this.velocity.x = -this.velocity.x
-  }
-
-  notifyEmergencyToNeighbors() {
+  notifyEmergencyToNeighbors(emergency) {
     const pos = this.space.getLocation(this.id)
     this.space.getNeighborsWithinDistance(pos, 30)
     .filter(agent => agent instanceof Vehycle)
+    .filter(vehicle => vehicle.emergency == undefined)
     .forEach(vehycle => this.sendMsg(vehycle.id, {
-      content: 'emergency'
+      content: emergency
     }))
+  }
+
+  escape(emergency) {
+    const thisPos = this.space.getLocation(this.id)
+    const emergencyPos = this.space.getLocation(emergency.id)
+    if(this.velocity.x > 0 && emergencyPos.x > thisPos.x)
+      this.velocity.x = -this.velocity.x
   }
 }
 
@@ -116,37 +116,41 @@ export default {
       const scheduler = new jssim.Scheduler()
       scheduler.reset()
 
-      const grid = new jssim.Grid(this.canvas.width, this.canvas.height)
-
       const space = new jssim.Space2D()
       space.reset()
 
-      const xRoad = 0
-      const yRoad = this.canvas.height / 2
-      const xEndRoad = this.canvas.width
-      const yEndRoad = yRoad
-      const roadWidth = 40
-      space.drawLine(xRoad, yRoad, xEndRoad, yEndRoad, { stroke: 'gray', width: roadWidth })
+      const road = {
+        x: 0,
+        y: this.canvas.height / 2,
+        endX: this.canvas.width,
+        endY: this.canvas.height / 2,
+        width: 40
+      }
+      space.drawLine(road.x, road.y, road.endX, road.endY, { stroke: 'gray', width: road.width })
 
       for(let i=0; i<this.maxVehycles; i++){
         const x = Math.ceil(Math.random() * this.canvas.width)
-        const y = Math.ceil(Math.random() * roadWidth / 2) + yRoad
+        const y = Math.ceil(Math.random() * road.width / 2) + road.y
         const vehycle = new Vehycle(i, x, y, space)
         scheduler.scheduleRepeatingIn(vehycle, 10)
       }
 
-      const xEmergency = Math.random() * this.canvas.width / 2 + this.canvas.width / 2
-      const yEmergency = Math.ceil(Math.random() * roadWidth / 2) + yRoad
-
-      const emergency = new Emergency(-1, xEmergency, yEmergency, space)
-      scheduler.schedule(emergency, 50)
+      const scheduleTime = 50
+      this.scheduleEmergency(scheduler, space, road, scheduleTime)
 
       const canvas = this.$refs.canvas
       setInterval(()=>{
         scheduler.update()
         space.render(canvas)
         this.currentTime = scheduler.current_time
-      }, 40)
+      }, 300)
+    },
+    scheduleEmergency(scheduler, space, road, scheduleTime) {
+      const xEmergency = Math.random() * this.canvas.width
+      const yEmergency = Math.ceil(Math.random() * road.width / 2) + road.y
+
+      const emergency = new Emergency(jssim.guid(), xEmergency, yEmergency, space)
+      scheduler.schedule(emergency, scheduleTime)
     }
   }
 }
@@ -154,6 +158,7 @@ export default {
 
 <style>
 .container {
+  background: lightgreen;
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
