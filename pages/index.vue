@@ -30,6 +30,13 @@ class Vehycle extends jssim.SimEvent {
   update() {
     const pos = this.space.getLocation(this.id)
     pos.x++
+
+    const neighbors = this.space.getNeighborsWithinDistance(pos, 30)
+    const emergency = neighbors.find(agent=>agent instanceof Emergency)
+    if(emergency) {
+      this.color = 'red'
+    }
+
   }
 }
 
