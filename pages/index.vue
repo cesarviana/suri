@@ -43,18 +43,18 @@ class Vehycle extends jssim.SimEvent {
 class Emergency extends jssim.SimEvent {
   constructor(id, x, y, space) {
     super()
+    this.x = x
+    this.y = y
     const rank = 1
     jssim.SimEvent.call(this, rank)
     this.id = id
     this.space = space
-    this.space.updateAgent(this, x, y)
-
-    this.border = 30
-    this.color = 'transparent'
-    this.size = new jssim.Vector2D(20, 20)
   }
   update() {
+    this.space.updateAgent(this, this.x, this.y)
     this.color = 'red'
+    this.border = 30
+    this.size = new jssim.Vector2D(20, 20)
   }
 }
 
